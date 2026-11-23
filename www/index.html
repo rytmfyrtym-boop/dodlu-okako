@@ -38,6 +38,7 @@
           <div class="hud-left">
             <div class="hud-score">Высота: <span id="hud-score">0</span></div>
             <div class="hud-biome" id="hud-biome">🌿 Сад</div>
+            <div class="hud-lives" id="hud-lives">❤️❤️❤️</div>
           </div>
           <div class="hud-right">
             <div class="hud-run-coins">🪙 <span id="hud-coins">0</span> ококи</div>
@@ -53,6 +54,8 @@
             <div class="boss-bar-fill" id="boss-hp-fill" style="width:100%"></div>
           </div>
         </div>
+
+        <div id="record-banner" class="record-banner hidden">🎉 НОВЫЙ РЕКОРД! Поздравляем! 🎉</div>
 
         <!-- Touch zones hint / controls -->
         <div id="touch-controls" class="hidden">
@@ -93,6 +96,7 @@
         <div id="overlay-gameover" class="overlay hidden">
           <div class="hero-card">
             <h2>Игра окончена!</h2>
+            <div id="go-record" class="go-record hidden">🏆 НОВЫЙ РЕКОРД! Поздравляем!</div>
             <div class="go-stats">
               <div class="go-stat">
                 <span>Высота</span>
@@ -131,6 +135,11 @@
 
         <div class="seeds-bar" id="seeds-bar">
           <!-- Populated by JS -->
+        </div>
+
+        <div class="sell-row">
+          <button id="btn-sell-seed" class="sell-btn">💸 Продать семя</button>
+          <button id="btn-sell-all-seeds" class="sell-btn">💸 Продать все</button>
         </div>
 
         <div class="garden-grid" id="garden-grid">
@@ -204,9 +213,13 @@
           </div>
         </div>
         <div class="credits-card">
-          <div class="credit-line">gemeni</div>
-          <div class="credit-line">никита фембой</div>
+          <div class="credit-line" id="credit-gemeni">gemeni</div>
+          <div class="credit-line" id="credit-nikita">никита фембой</div>
         </div>
+
+        <h3 class="sub-heading">🎁 Розыгрыши</h3>
+        <div class="giveaway-note">Розыгрыши ококов от админов. Жми «Участвовать»!</div>
+        <div id="giveaway-list" class="shop-list"></div>
       </section>
     </main>
 
@@ -261,6 +274,32 @@
         <div class="offline-amount" id="offline-amount">+0 ококи</div>
         <button id="btn-claim-offline" class="primary-btn">Забрать ококи</button>
       </div>
+    </div>
+
+    <!-- Modal: Access code -->
+    <div id="modal-code" class="modal hidden">
+      <div class="modal-card">
+        <h3>🔐 Доступ</h3>
+        <p class="modal-text">Введите код</p>
+        <input id="code-input" class="code-input" type="password" inputmode="numeric" maxlength="12" autocomplete="off" />
+        <button id="btn-code-ok" class="primary-btn">Войти</button>
+        <button id="btn-code-cancel" class="secondary-btn">Отмена</button>
+      </div>
+    </div>
+
+    <!-- Modal: Admin panel -->
+    <div id="modal-admin" class="modal hidden">
+      <div class="modal-card admin-card">
+        <h3>🛠 Админ-панель</h3>
+        <div id="admin-body"></div>
+        <button id="btn-admin-close" class="secondary-btn">Закрыть</button>
+      </div>
+    </div>
+
+    <!-- Prank overlay -->
+    <div id="prank" class="prank hidden">
+      <div id="prank-text" class="prank-text"></div>
+      <button id="prank-close" class="secondary-btn hidden">Закрыть</button>
     </div>
 
     <!-- Toast Notification -->
