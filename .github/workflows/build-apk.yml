@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -34,9 +37,18 @@ jobs:
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
           ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../DoodleGarden.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: DoodleGarden-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: DoodleGarden.apk
+
+      - name: Publish APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Doodle Garden APK
+          files: DoodleGarden.apk
+          make_latest: true
