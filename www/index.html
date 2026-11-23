@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#101828" />
+  <title>Doodle Garden — Дудл Сад</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Top HUD -->
+    <header id="top-bar">
+      <div class="stat-pill coins-pill" title="Ококи">
+        <span class="icon">🪙</span>
+        <span id="ui-coins">0</span>
+        <span class="currency-tag">ококи</span>
+      </div>
+      <div class="stat-pill income-pill" title="Пассивный доход сада">
+        <span class="icon">🌱</span>
+        <span id="ui-income">+0/с</span>
+      </div>
+      <div class="stat-pill best-pill">
+        <span class="icon">🏆</span>
+        <span id="ui-best">0</span>
+      </div>
+      <button id="btn-sound" class="icon-btn" aria-label="Звук">🔊</button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="screens">
+      <!-- PLAY / GAME SCREEN -->
+      <section id="screen-play" class="screen active">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- In-game HUD -->
+        <div id="game-hud" class="hidden">
+          <div class="hud-left">
+            <div class="hud-score">Высота: <span id="hud-score">0</span></div>
+            <div class="hud-biome" id="hud-biome">🌿 Сад</div>
+          </div>
+          <div class="hud-right">
+            <div class="hud-run-coins">🪙 <span id="hud-coins">0</span> ококи</div>
+            <div class="hud-powerups" id="hud-powerups"></div>
+          </div>
+          <button id="btn-pause" class="pause-btn">⏸</button>
+        </div>
+
+        <!-- Boss HP Bar -->
+        <div id="boss-hud" class="boss-hud hidden">
+          <div class="boss-title" id="boss-name">👑 БОСС</div>
+          <div class="boss-bar">
+            <div class="boss-bar-fill" id="boss-hp-fill" style="width:100%"></div>
+          </div>
+        </div>
+
+        <!-- Touch zones hint / controls -->
+        <div id="touch-controls" class="hidden">
+          <button id="ctrl-left" class="touch-btn">◀</button>
+          <button id="ctrl-shoot" class="touch-btn shoot-btn">⚡</button>
+          <button id="ctrl-right" class="touch-btn">▶</button>
+        </div>
+
+        <!-- Start Overlay -->
+        <div id="overlay-start" class="overlay">
+          <div class="hero-card">
+            <div class="logo-badge">✨ НОВЫЙ ХИТ</div>
+            <h1>DOODLE<br><span>GARDEN</span></h1>
+            <p class="subtitle">Прыгай выше облаков, выращивай Дудов в саду и выбивай легендарные скины!</p>
+
+            <div class="equipped-preview">
+              <canvas id="preview-canvas" width="96" height="96"></canvas>
+              <div class="equipped-info">
+                <div class="equipped-label">Твой Дуд:</div>
+                <div class="equipped-name" id="start-skin-name">Классический</div>
+                <div class="equipped-bonus" id="start-skin-bonus">Без бонуса</div>
+              </div>
+            </div>
+
+            <button id="btn-start-game" class="primary-btn big-btn">🚀 ИГРАТЬ</button>
+            <a id="btn-download-apk" href="DoodleGarden.apk" download="DoodleGarden.apk" class="secondary-btn apk-btn">📲 Скачать APK на Android</a>
+
+            <div class="control-toggle">
+              <label>
+                <input type="checkbox" id="chk-tilt" />
+                <span>Управление наклоном (гироскоп)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="overlay-gameover" class="overlay hidden">
+          <div class="hero-card">
+            <h2>Игра окончена!</h2>
+            <div class="go-stats">
+              <div class="go-stat">
+                <span>Высота</span>
+                <strong id="go-score">0</strong>
+              </div>
+              <div class="go-stat">
+                <span>Рекорд</span>
+                <strong id="go-best">0</strong>
+              </div>
+              <div class="go-stat">
+                <span>Ококи</span>
+                <strong id="go-coins">+0</strong>
+              </div>
+              <div class="go-stat">
+                <span>Семена</span>
+                <strong id="go-seeds">+0</strong>
+              </div>
+            </div>
+            <button id="btn-restart" class="primary-btn big-btn">🔄 ЕЩЁ РАЗ</button>
+            <button id="btn-to-garden" class="secondary-btn">🌱 В Сад Дудов</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GARDEN SCREEN -->
+      <section id="screen-garden" class="screen">
+        <div class="section-header">
+          <div>
+            <h2>🌱 Сад Дудов</h2>
+            <p>Выращивай Дудов для пассивного дохода</p>
+          </div>
+          <button id="btn-collect-all" class="accent-btn">
+            Собрать <span id="garden-bank">0</span> ококи
+          </button>
+        </div>
+
+        <div class="seeds-bar" id="seeds-bar">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="garden-grid" id="garden-grid">
+          <!-- 9 plots populated by JS -->
+        </div>
+
+        <div class="garden-tip">
+          💡 Нажми на пустую грядку, чтобы посадить семя. Нажми на росток, чтобы полить и ускорить рост. Выросшие Дуды приносят ококи даже в оффлайне!
+        </div>
+      </section>
+
+      <!-- SKINS & CASES SCREEN -->
+      <section id="screen-skins" class="screen">
+        <div class="section-header">
+          <div>
+            <h2>🎭 Скины и Кейсы</h2>
+            <p>Выбивай редких Дудов с бонусами</p>
+          </div>
+          <div class="skin-count" id="skin-count">1/12</div>
+        </div>
+
+        <!-- Cases -->
+        <div class="cases-row">
+          <div class="case-card common-case">
+            <div class="case-icon">📦</div>
+            <div class="case-title">Обычный кейс</div>
+            <div class="case-desc">Обычные и Редкие</div>
+            <button class="case-btn" data-case="common">120 ококи</button>
+          </div>
+          <div class="case-card epic-case">
+            <div class="case-icon">🎁</div>
+            <div class="case-title">Эпик кейс</div>
+            <div class="case-desc">Шанс на Эпик и Легенду</div>
+            <button class="case-btn" data-case="epic">450 ококи</button>
+          </div>
+          <div class="case-card legend-case">
+            <div class="case-icon">👑</div>
+            <div class="case-title">Легенд кейс</div>
+            <div class="case-desc">Гарант Эпик+</div>
+            <button class="case-btn" data-case="legend">1400 ококи</button>
+          </div>
+        </div>
+
+        <h3 class="sub-heading">Коллекция скинов</h3>
+        <div class="skins-grid" id="skins-grid">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- SHOP / UPGRADES SCREEN -->
+      <section id="screen-shop" class="screen">
+        <div class="section-header">
+          <div>
+            <h2>🛒 Магазин</h2>
+            <p>Прокачка навыков и покупка семян</p>
+          </div>
+        </div>
+
+        <h3 class="sub-heading">Улучшения</h3>
+        <div class="shop-list" id="upgrades-list"></div>
+
+        <h3 class="sub-heading">Купить семена для сада</h3>
+        <div class="shop-list" id="seed-shop-list"></div>
+      </section>
+      <!-- CREDITS SCREEN -->
+      <section id="screen-credits" class="screen">
+        <div class="section-header">
+          <div>
+            <h2>📜 Кредиты</h2>
+            <p>Авторы игры Doodle Garden</p>
+          </div>
+        </div>
+        <div class="credits-card">
+          <div class="credit-line">gemeni</div>
+          <div class="credit-line">никита фембой</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav">
+      <button class="nav-btn active" data-tab="play">
+        <span class="nav-icon">🎮</span>
+        <span>Игра</span>
+      </button>
+      <button class="nav-btn" data-tab="garden">
+        <span class="nav-icon">🌱</span>
+        <span>Сад</span>
+      </button>
+      <button class="nav-btn" data-tab="skins">
+        <span class="nav-icon">🎭</span>
+        <span>Скины</span>
+      </button>
+      <button class="nav-btn" data-tab="shop">
+        <span class="nav-icon">🛒</span>
+        <span>Магазин</span>
+      </button>
+      <button class="nav-btn" data-tab="credits">
+        <span class="nav-icon">📜</span>
+        <span>Кредиты</span>
+      </button>
+    </nav>
+
+    <!-- Modal: Case Opening -->
+    <div id="modal-case" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="case-modal-title">Открываем кейс...</h3>
+        <div class="roulette-window">
+          <div class="roulette-pointer">▼</div>
+          <div class="roulette-track" id="roulette-track"></div>
+        </div>
+        <div id="case-result" class="case-result hidden">
+          <div class="result-badge" id="result-rarity">РЕДКИЙ</div>
+          <div class="result-name" id="result-name">Ниндзя</div>
+          <div class="result-bonus" id="result-bonus">+15% скорости</div>
+          <div class="result-note" id="result-note"></div>
+          <button id="btn-close-case" class="primary-btn">Отлично!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Offline Income -->
+    <div id="modal-offline" class="modal hidden">
+      <div class="modal-card">
+        <div class="offline-icon">🌙✨</div>
+        <h3>С возвращением!</h3>
+        <p>Пока тебя не было, твои Дуды в саду заработали:</p>
+        <div class="offline-amount" id="offline-amount">+0 ококи</div>
+        <button id="btn-claim-offline" class="primary-btn">Забрать ококи</button>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
