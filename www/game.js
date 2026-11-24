@@ -92,6 +92,13 @@ const BOSS_TEMPLATES = [
 
 const BOT_NAMES = ['Dud_Master', 'ОкокоКороль', 'FemBoyFan', 'ПрыгунТоп', 'Садовод228', 'NeonDud', 'Кактусёнок', 'GemeniFan'];
 
+const PETS = [
+  { id: 'drone',  name: 'Мини-Дрон',       emoji: '🤖', cost: 400,  desc: 'Сам стреляет во врагов и боссов' },
+  { id: 'bee',    name: 'Магнит-Пчёлка',   emoji: '🐝', cost: 600,  desc: 'Мощный магнит (+120) и +15% ококи' },
+  { id: 'angel',  name: 'Ангел-Хранитель', emoji: '👼', cost: 1200, desc: 'Даёт щит каждые 25 сек в забеге' },
+  { id: 'dragon', name: 'Мини-Дракон',     emoji: '🐉', cost: 3000, desc: 'Стреляет + +30% ококи + Fever быстрее' }
+];
+
 /* ---------- Sound ---------- */
 const Sound = {
   ctx: null,
@@ -150,7 +157,7 @@ function defaultState() {
     seeds: { common: 2, rare: 0, epic: 0, legend: 0 },
     selectedSeed: 'common',
     plots: Array.from({ length: 9 }, (_, i) => ({
-      unlocked: i < 3, seedId: null, plantedAt: 0, growBonusSec: 0, grown: false, level: 1
+      unlocked: i < 3, seedId: null, plantedAt: 0, growBonusSec: 0, grown: false, level: 1, tier: 1
     })),
     gardenBank: 0,
     upgrades: { magnet: 0, jetpack: 0, springs: 0, coinMult: 0, garden: 0 },
@@ -158,6 +165,11 @@ function defaultState() {
     tilt: false,
     inf: false,
     god: false,
+    rebirth: 0,
+    ownedPets: [],
+    equippedPet: null,
+    daily: { streak: 0, lastClaim: '' },
+    quests: { date: '', list: [] },
     giveaways: defaultGiveaways(),
     lastSaved: Date.now()
   };
@@ -173,11 +185,16 @@ function loadState() {
       state = Object.assign(defaultState(), parsed);
       state.seeds = Object.assign(defaultState().seeds, parsed.seeds || {});
       state.upgrades = Object.assign(defaultState().upgrades, parsed.upgrades || {});
+      state.daily = Object.assign(defaultState().daily, parsed.daily || {});
+      state.quests = Object.assign(defaultState().quests, parsed.quests || {});
       if (!Array.isArray(state.plots) || state.plots.length !== 9) state.plots = defaultState().plots;
+      state.plots.forEach(p => { if (!p.tier) p.tier = 1; });
+      if (!Array.isArray(state.ownedPets)) state.ownedPets = [];
       if (!Array.isArray(state.giveaways)) state.giveaways = defaultGiveaways();
     }
   } catch (e) { console.warn('Load failed', e); }
   Sound.enabled = state.sound;
+  ensureTodayQuests();
   processOfflineIncome();
 }
 
@@ -195,12 +212,13 @@ function getGardenIncomePerSec() {
   let total = 0;
   for (const p of state.plots) {
     if (p.unlocked && p.grown && p.seedId && SEEDS[p.seedId]) {
-      total += SEEDS[p.seedId].baseIncome * (1 + (p.level - 1) * 0.6);
+      total += SEEDS[p.seedId].baseIncome * (1 + (p.level - 1) * 0.6) * Math.pow(3, (p.tier || 1) - 1);
     }
   }
   const skinMult = 1 + (getEquippedSkin().bonus.gardenMult || 0);
   const upgMult = 1 + (state.upgrades.garden || 0) * 0.30;
-  return total * skinMult * upgMult;
+  const rebMult = 1 + (state.rebirth || 0);
+  return total * skinMult * upgMult * rebMult;
 }
 
 function processOfflineIncome() {
@@ -385,7 +403,8 @@ function renderGarden() {
 
   state.plots.forEach((p, idx) => {
     const card = document.createElement('div');
-    card.className = 'plot-card' + (!p.unlocked ? ' locked' : '');
+    const tierCls = p.unlocked && p.grown && (p.tier || 1) > 1 ? ` tier-${p.tier}` : '';
+    card.className = 'plot-card' + (!p.unlocked ? ' locked' : '') + tierCls;
     card.dataset.idx = idx;
 
     if (!p.unlocked) {
@@ -434,21 +453,24 @@ function renderGarden() {
       card.onclick = () => {
         p.growBonusSec = (p.growBonusSec || 0) + 5;
         Sound.jump();
+        addQuestProgress('garden', 1);
         tickGarden();
       };
       card.querySelector('.plot-sell-btn').onclick = (e) => {
         e.stopPropagation();
         state.coins += growingSellPrice(p);
-        p.seedId = null; p.grown = false; p.level = 1; p.growBonusSec = 0;
+        p.seedId = null; p.grown = false; p.level = 1; p.growBonusSec = 0; p.tier = 1;
         Sound.coin(); saveState(); updateTopHUD(); renderGarden();
       };
     } else {
       const s = SEEDS[p.seedId];
-      const inc = (s.baseIncome * (1 + (p.level - 1) * 0.6)).toFixed(1);
+      const tier = p.tier || 1;
+      const tierBadge = tier === 3 ? '🌈 ' : tier === 2 ? '🌟 ' : '';
+      const inc = (s.baseIncome * (1 + (p.level - 1) * 0.6) * Math.pow(3, tier - 1)).toFixed(1);
       const upgCost = Math.floor(s.cost * 0.8 * Math.pow(1.6, p.level - 1));
       card.innerHTML = `
-        <div class="plot-emoji">${s.grownEmoji}</div>
-        <div class="plot-name">${s.name}</div>
+        <div class="plot-emoji">${tierBadge}${s.grownEmoji}</div>
+        <div class="plot-name">${tier === 3 ? 'Радужный ' : tier === 2 ? 'Мега ' : ''}${s.name}</div>
         <div class="plot-income">+${inc}/с • Ур.${p.level}</div>
         <button class="plot-upgrade-btn">⬆ ${upgCost} ококи</button>
         <button class="plot-sell-btn">💸 Продать +${plantSellPrice(p)}</button>`;
@@ -458,6 +480,7 @@ function renderGarden() {
           state.coins -= upgCost;
           p.level++;
           Sound.win();
+          addQuestProgress('garden', 1);
           saveState(); updateTopHUD(); renderGarden();
         } else showToast(`Нужно ${upgCost} ококи`);
       };
@@ -465,7 +488,7 @@ function renderGarden() {
         e.stopPropagation();
         const gain = plantSellPrice(p);
         state.coins += gain;
-        p.seedId = null; p.grown = false; p.level = 1; p.growBonusSec = 0;
+        p.seedId = null; p.grown = false; p.level = 1; p.growBonusSec = 0; p.tier = 1;
         Sound.coin();
         showToast(`Дуд продан за ${gain} ококи`);
         saveState(); updateTopHUD(); renderGarden();
@@ -473,6 +496,26 @@ function renderGarden() {
     }
     grid.appendChild(card);
   });
+}
+
+function mergeGarden() {
+  for (let i = 0; i < state.plots.length; i++) {
+    const a = state.plots[i];
+    if (!a.unlocked || !a.grown || !a.seedId || (a.tier || 1) >= 3) continue;
+    for (let j = i + 1; j < state.plots.length; j++) {
+      const b = state.plots[j];
+      if (b.unlocked && b.grown && b.seedId === a.seedId && (b.tier || 1) === (a.tier || 1)) {
+        a.tier = (a.tier || 1) + 1;
+        a.level = Math.max(a.level, b.level);
+        b.seedId = null; b.grown = false; b.level = 1; b.growBonusSec = 0; b.tier = 1;
+        Sound.win();
+        showToast(`🌟 Слияние! Получен ${a.tier === 3 ? 'Радужный' : 'Мега'} Дуд!`);
+        saveState(); updateTopHUD(); renderGarden();
+        return;
+      }
+    }
+  }
+  showToast('Нужны 2 выросших одинаковых Дуда одного ранга');
 }
 
 /* Обновляет прогресс роста без перерисовки (чтобы нажатия не терялись) */
@@ -596,8 +639,83 @@ function rollSkin(caseKey) {
   }, 2700);
 }
 
-/* ---------- Shop ---------- */
+/* ---------- Shop & Rebirth & Pets ---------- */
+function getRebirthCost() {
+  return 5000 * Math.pow((state.rebirth || 0) + 1, 2);
+}
+
+function doRebirth() {
+  const cost = getRebirthCost();
+  if (state.coins < cost) { showToast(`Нужно ${fmt(cost)} ококи для перерождения`); return; }
+  const keep = {
+    unlockedSkins: state.unlockedSkins,
+    equippedSkin: state.equippedSkin,
+    ownedPets: state.ownedPets,
+    equippedPet: state.equippedPet,
+    bestScore: state.bestScore,
+    daily: state.daily,
+    quests: state.quests,
+    giveaways: state.giveaways,
+    inf: state.inf,
+    god: state.god,
+    sound: state.sound,
+    tilt: state.tilt,
+    rebirth: (state.rebirth || 0) + 1
+  };
+  state = Object.assign(defaultState(), keep);
+  Sound.win();
+  showToast(`♻️ Перерождение #${state.rebirth}! Навсегда ×${1 + state.rebirth} к ококам и саду!`);
+  saveState(); updateTopHUD(); updateStartPreview(); renderGarden(); renderShop();
+}
+
 function renderShop() {
+  const rebBox = document.getElementById('rebirth-box');
+  if (rebBox) {
+    const rCost = getRebirthCost();
+    const curMult = 1 + (state.rebirth || 0);
+    rebBox.innerHTML = `
+      <h4>♻️ Перерождение (Престиж: ${state.rebirth || 0})</h4>
+      <p>Текущий множитель: <b>×${curMult}</b> к саду и ококам в игре.<br>Сбросит сад и улучшения, оставит скины и питомцев.</p>
+      <button id="btn-rebirth" class="buy-btn">Переродиться за ${fmt(rCost)} ококи (×${curMult + 1})</button>`;
+    rebBox.querySelector('#btn-rebirth').onclick = doRebirth;
+  }
+
+  const petsList = document.getElementById('pets-list');
+  if (petsList) {
+    petsList.innerHTML = '';
+    PETS.forEach(pt => {
+      const owned = state.ownedPets.includes(pt.id);
+      const eq = state.equippedPet === pt.id;
+      const el = document.createElement('div');
+      el.className = 'shop-item';
+      el.innerHTML = `
+        <div class="shop-left">
+          <div class="shop-icon">${pt.emoji}</div>
+          <div>
+            <div class="shop-title">${pt.name}</div>
+            <div class="shop-desc">${pt.desc}</div>
+          </div>
+        </div>
+        <button class="buy-btn" ${eq ? 'disabled' : ''}>${eq ? '✅ Надет' : (owned ? 'Надеть' : pt.cost + ' ококи')}</button>`;
+      el.querySelector('.buy-btn').onclick = () => {
+        if (owned) {
+          state.equippedPet = pt.id;
+          Sound.coin();
+          saveState(); renderShop();
+          showToast(`Питомец выбран: ${pt.name}`);
+        } else if (state.coins >= pt.cost) {
+          state.coins -= pt.cost;
+          state.ownedPets.push(pt.id);
+          state.equippedPet = pt.id;
+          Sound.win();
+          saveState(); updateTopHUD(); renderShop();
+          showToast(`Куплен и надет питомец: ${pt.name}!`);
+        } else showToast(`Нужно ${pt.cost} ококи`);
+      };
+      petsList.appendChild(el);
+    });
+  }
+
   const upgList = document.getElementById('upgrades-list');
   upgList.innerHTML = '';
   UPGRADES.forEach(u => {
@@ -652,6 +770,100 @@ function renderShop() {
       } else showToast(`Нужно ${s.cost} ококи`);
     };
     seedList.appendChild(el);
+  });
+}
+
+/* ---------- Daily & Quests ---------- */
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function ensureTodayQuests() {
+  const today = todayKey();
+  if (!state.quests || state.quests.date !== today || !Array.isArray(state.quests.list) || state.quests.list.length === 0) {
+    state.quests = {
+      date: today,
+      list: [
+        { id: 'coins',  title: 'Собери 300 ококов в забеге',       target: 300, prog: 0, rewardCoins: 250, rewardSeed: null,   claimed: false },
+        { id: 'kills',  title: 'Победи 5 врагов или босса',        target: 5,   prog: 0, rewardCoins: 200, rewardSeed: 'rare', claimed: false },
+        { id: 'garden', title: 'Полей или улучши сад 5 раз',       target: 5,   prog: 0, rewardCoins: 200, rewardSeed: null,   claimed: false }
+      ]
+    };
+  }
+}
+
+function addQuestProgress(type, amount) {
+  ensureTodayQuests();
+  const q = state.quests.list.find(x => x.id === type);
+  if (!q || q.claimed) return;
+  const prev = q.prog;
+  q.prog = Math.min(q.target, q.prog + amount);
+  if (prev < q.target && q.prog >= q.target) {
+    showToast(`🎯 Квест выполнен: ${q.title}! Забери в 🎯`);
+  }
+}
+
+function claimDaily() {
+  const today = todayKey();
+  if (state.daily.lastClaim === today) { showToast('Награда за сегодня уже получена!'); return; }
+  const yest = new Date(Date.now() - 86400000);
+  const yKey = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+  state.daily.streak = state.daily.lastClaim === yKey ? ((state.daily.streak % 7) + 1) : 1;
+  state.daily.lastClaim = today;
+
+  const day = state.daily.streak;
+  const bonusCoins = day * 150;
+  state.coins += bonusCoins;
+  Sound.win();
+  if (day === 7) {
+    const res = grantSkin('epic');
+    showToast(`🔥 7-й день! +${bonusCoins} ококи${skinDropText(res)}`);
+  } else {
+    state.seeds.rare = (state.seeds.rare || 0) + 1;
+    showToast(`📅 День ${day}: +${bonusCoins} ококи и 1 редкое семя!`);
+  }
+  saveState(); updateTopHUD(); renderSkins(); updateStartPreview(); renderQuests();
+}
+
+function renderQuests() {
+  ensureTodayQuests();
+  const today = todayKey();
+  const claimedToday = state.daily.lastClaim === today;
+  const nextDay = claimedToday ? state.daily.streak : ((state.daily.streak % 7) + 1);
+  const dBox = document.getElementById('daily-box');
+  dBox.innerHTML = `
+    <h4>📅 Ежедневный вход (Серия: ${state.daily.streak || 0}/7)</h4>
+    <p>${claimedToday ? 'Сегодняшняя награда уже получена! Возвращайся завтра.' : `День ${nextDay}: +${nextDay * 150} ококи ${nextDay === 7 ? '+ БЕСПЛАТНЫЙ ЭПИК КЕЙС!' : '+ редкое семя'}`}</p>
+    <button id="btn-claim-daily" class="buy-btn" ${claimedToday ? 'disabled' : ''}>${claimedToday ? '✅ Получено' : '🎁 Забрать награду'}</button>`;
+  const db = dBox.querySelector('#btn-claim-daily');
+  if (db) db.onclick = claimDaily;
+
+  const qList = document.getElementById('quests-list');
+  qList.innerHTML = '';
+  state.quests.list.forEach(q => {
+    const done = q.prog >= q.target;
+    const el = document.createElement('div');
+    el.className = 'shop-item';
+    el.innerHTML = `
+      <div class="shop-left">
+        <div class="shop-icon">${q.claimed ? '✅' : (done ? '🎁' : '🎯')}</div>
+        <div>
+          <div class="shop-title">${q.title}</div>
+          <div class="shop-desc">Прогресс: ${q.prog}/${q.target} • Награда: +${q.rewardCoins} ококи${q.rewardSeed ? ' + редкое семя' : ''}</div>
+        </div>
+      </div>
+      <button class="buy-btn" ${(!done || q.claimed) ? 'disabled' : ''}>${q.claimed ? 'Забрано' : (done ? 'Забрать' : `${q.prog}/${q.target}`)}</button>`;
+    el.querySelector('.buy-btn').onclick = () => {
+      if (!done || q.claimed) return;
+      q.claimed = true;
+      state.coins += q.rewardCoins;
+      if (q.rewardSeed) state.seeds[q.rewardSeed] = (state.seeds[q.rewardSeed] || 0) + 1;
+      Sound.win();
+      showToast(`🎉 Награда получена: +${q.rewardCoins} ококи!`);
+      saveState(); updateTopHUD(); renderGarden(); renderQuests();
+    };
+    qList.appendChild(el);
   });
 }
 
@@ -1084,11 +1296,14 @@ function startGame() {
       vx: 0, vy: -13, facing: 1,
       shield: !!b.startShield, jetpack: 0
     },
-    platforms: [], items: [], enemies: [], bullets: [], bossBullets: [],
+    platforms: [], items: [], enemies: [], bullets: [], bossBullets: [], meteors: [],
     boss: null, nextBossScore: 800, bossTier: 0,
     particles: [],
     highestPlatY: H - 50,
-    lastType: 'normal'
+    lastType: 'normal',
+    combo: 0, comboTimer: 0, fever: 0, feverTimer: 0,
+    eventTimer: 900, eventType: null, eventDuration: 0,
+    petShootCd: 40, petShieldCd: 1500
   };
 
   game.platforms.push({ x: W / 2 - 50, y: H - 70, w: 100, h: 16, type: 'normal', vx: 0, broken: false, hasSpring: false });
@@ -1098,6 +1313,8 @@ function startGame() {
   document.getElementById('overlay-gameover').classList.add('hidden');
   document.getElementById('record-banner').classList.add('hidden');
   document.getElementById('boss-hud').classList.add('hidden');
+  document.getElementById('fever-hud').classList.remove('hidden');
+  document.getElementById('event-banner').classList.add('hidden');
   document.getElementById('game-hud').classList.remove('hidden');
   document.getElementById('touch-controls').classList.remove('hidden');
   document.getElementById('btn-pause').textContent = '⏸';
@@ -1176,7 +1393,7 @@ function heartsString() {
 function hurtPlayer() {
   const p = game.player;
   const b = getEquippedSkin().bonus;
-  if (game.invuln > 0 || p.jetpack > 0) return false;
+  if (game.invuln > 0 || p.jetpack > 0 || game.feverTimer > 0) return false;
   if (p.shield) {
     p.shield = false;
     game.invuln = 45;
@@ -1240,6 +1457,8 @@ function endGame() {
   document.getElementById('overlay-gameover').classList.remove('hidden');
   document.getElementById('touch-controls').classList.add('hidden');
   document.getElementById('boss-hud').classList.add('hidden');
+  document.getElementById('fever-hud').classList.add('hidden');
+  document.getElementById('event-banner').classList.add('hidden');
   document.getElementById('record-banner').classList.add('hidden');
 }
 
@@ -1250,6 +1469,22 @@ function showRecordBanner() {
   addParticles(game.player.x + 22, game.player.y, '#facc15', 30);
   clearTimeout(recordTimer);
   recordTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+function addCombo(feverGain) {
+  if (!game) return;
+  game.combo++;
+  game.comboTimer = 210;
+  if (game.feverTimer <= 0) {
+    const mult = state.equippedPet === 'dragon' ? 1.5 : 1;
+    game.fever = Math.min(100, game.fever + feverGain * mult);
+    if (game.fever >= 100) {
+      game.fever = 0;
+      game.feverTimer = 360;
+      Sound.win();
+      showToast('🔥 FEVER MODE! ×3 ококи и полёт!');
+    }
+  }
 }
 
 function damageBoss(dmg, coinMult) {
@@ -1264,6 +1499,8 @@ function damageBoss(dmg, coinMult) {
   if (bs.hp <= 0) {
     const reward = Math.round(bs.reward * coinMult);
     game.runCoins += reward;
+    addQuestProgress('coins', reward);
+    addQuestProgress('kills', 1);
     const dropSeed = game.bossTier >= 2 ? 'epic' : 'rare';
     state.seeds[dropSeed] = (state.seeds[dropSeed] || 0) + 1;
     game.runSeeds++;
@@ -1309,8 +1546,74 @@ function updateGame() {
     p.jetpack--;
     p.vy = -15.5;
     if (p.jetpack % 3 === 0) addParticles(p.x + p.w / 2, p.y + p.h, '#facc15', 2);
+  } else if (game.feverTimer > 0) {
+    p.vy = -13.5;
+    if (game.feverTimer % 2 === 0) addParticles(p.x + p.w / 2, p.y + p.h, '#ec4899', 2);
   } else p.vy += grav;
   p.y += p.vy;
+
+  // Combo & Fever timers
+  if (game.comboTimer > 0) {
+    game.comboTimer--;
+    if (game.comboTimer <= 0) game.combo = 0;
+  }
+  if (game.feverTimer > 0) game.feverTimer--;
+
+  // Random In-Run Events
+  if (game.eventDuration > 0) {
+    game.eventDuration--;
+    if (game.eventType === 'gold' && game.eventDuration % 12 === 0) {
+      game.items.push({ x: 20 + Math.random() * (W - 40), y: game.cameraY - 20, type: 'coin', collected: false, vy: 3.5 });
+    } else if (game.eventType === 'meteors' && game.eventDuration % 28 === 0) {
+      game.meteors.push({ x: 20 + Math.random() * (W - 40), y: game.cameraY - 30, vy: 5.5, r: 16 });
+    }
+    if (game.eventDuration <= 0) {
+      if (game.eventType === 'meteors') {
+        game.runCoins += 150;
+        addQuestProgress('coins', 150);
+        Sound.win();
+        showToast('☄️ Шторм пережит! +150 ококи!');
+      }
+      game.eventType = null;
+      document.getElementById('event-banner').classList.add('hidden');
+    }
+  } else {
+    game.eventTimer--;
+    if (game.eventTimer <= 0 && game.score >= 300) {
+      const types = [
+        { t: 'gold', label: '💰 ЗОЛОТОЙ ДОЖДЬ!' },
+        { t: 'springs', label: '🌀 ПРУЖИННОЕ БЕЗУМИЕ!' },
+        { t: 'meteors', label: '☄️ МЕТЕОРИТНЫЙ ШТОРМ!' }
+      ];
+      const pick = types[Math.floor(Math.random() * types.length)];
+      game.eventType = pick.t;
+      game.eventDuration = 600;
+      game.eventTimer = 1500;
+      const eb = document.getElementById('event-banner');
+      eb.textContent = pick.label;
+      eb.classList.remove('hidden');
+      Sound.win();
+    }
+  }
+
+  // Pet abilities
+  if (state.equippedPet) {
+    if (state.equippedPet === 'drone' || state.equippedPet === 'dragon') {
+      game.petShootCd--;
+      if (game.petShootCd <= 0 && (game.enemies.length > 0 || game.boss)) {
+        game.petShootCd = 70;
+        Sound.shoot();
+        game.bullets.push({ x: p.x + p.w / 2 + 28, y: p.y - 10, vx: 0, vy: -14, pierce: state.equippedPet === 'dragon' });
+      }
+    }
+    if (state.equippedPet === 'angel') {
+      game.petShieldCd--;
+      if (game.petShieldCd <= 0) {
+        game.petShieldCd = 1500;
+        if (!p.shield) { p.shield = true; Sound.win(); showToast('👼 Ангел подарил щит!'); }
+      }
+    }
+  }
 
   if (b.neonTrail && Math.random() < 0.4) addParticles(p.x + p.w / 2, p.y + p.h / 2, skin.color, 1);
 
@@ -1342,7 +1645,7 @@ function updateGame() {
         pl.broken = true;
         Sound.break();
         addParticles(pl.x + pl.w / 2, pl.y, '#a16207', 8);
-      } else if (pl.hasSpring) {
+      } else if (pl.hasSpring || (game.eventType === 'springs' && pl.type === 'normal')) {
         p.vy = jumpV * 1.6;
         Sound.spring();
         addParticles(pl.x + pl.w / 2, pl.y, '#38bdf8', 10);
@@ -1355,22 +1658,31 @@ function updateGame() {
   }
 
   // Предметы
-  const magRange = 45 + (state.upgrades.magnet || 0) * 32 + (b.magnetBonus || 0);
-  const hasMagnet = (state.upgrades.magnet || 0) > 0 || !!b.magnetBonus;
-  const coinMult = 1 + (b.coinMult || 0) + (state.upgrades.coinMult || 0) * 0.25;
+  const petMag = state.equippedPet === 'bee' ? 120 : 0;
+  const petCoin = state.equippedPet === 'bee' ? 0.15 : (state.equippedPet === 'dragon' ? 0.30 : 0);
+  const magRange = game.feverTimer > 0 ? 9999 : (45 + (state.upgrades.magnet || 0) * 32 + (b.magnetBonus || 0) + petMag);
+  const hasMagnet = game.feverTimer > 0 || (state.upgrades.magnet || 0) > 0 || !!b.magnetBonus || petMag > 0;
+  const comboMult = 1 + Math.min(4, Math.floor(game.combo / 5));
+  const feverMult = game.feverTimer > 0 ? 3 : 1;
+  const rebMult = 1 + (state.rebirth || 0);
+  const coinMult = (1 + (b.coinMult || 0) + (state.upgrades.coinMult || 0) * 0.25 + petCoin) * rebMult;
   for (const it of game.items) {
     if (it.collected) continue;
+    if (it.vy) it.y += it.vy;
     const dx = (p.x + p.w / 2) - it.x;
     const dy = (p.y + p.h / 2) - it.y;
     const dist = Math.hypot(dx, dy);
     if (hasMagnet && (it.type === 'coin' || it.type === 'seed') && dist < magRange) {
-      it.x += dx * 0.14;
-      it.y += dy * 0.14;
+      it.x += dx * 0.16;
+      it.y += dy * 0.16;
     }
     if (dist < 30) {
       it.collected = true;
       if (it.type === 'coin') {
-        game.runCoins += Math.max(1, Math.round(5 * coinMult));
+        const gained = Math.max(1, Math.round(5 * coinMult * comboMult * feverMult));
+        game.runCoins += gained;
+        addQuestProgress('coins', gained);
+        addCombo(12);
         Sound.coin();
         addParticles(it.x, it.y, '#fde047', 6);
       } else if (it.type === 'seed') {
@@ -1407,14 +1719,26 @@ function updateGame() {
       if (bl.x > en.x && bl.x < en.x + en.w && bl.y > en.y && bl.y < en.y + en.h) {
         en.alive = false;
         if (!bl.pierce) bl.y = -999999;
-        game.runCoins += Math.round(15 * coinMult);
+        const gained = Math.round(15 * coinMult);
+        game.runCoins += gained;
+        addQuestProgress('coins', gained);
+        addQuestProgress('kills', 1);
+        addCombo(20);
         Sound.coin();
         addParticles(en.x + en.w / 2, en.y + en.h / 2, '#f43f5e', 12);
+      }
+    }
+    for (const mt of game.meteors) {
+      if (Math.hypot(bl.x - mt.x, bl.y - mt.y) < mt.r + 8) {
+        mt.y = 999999999;
+        if (!bl.pierce) bl.y = -999999;
+        addParticles(mt.x, mt.y, '#fb923c', 10);
       }
     }
     if (game.boss && bl.x > game.boss.x && bl.x < game.boss.x + game.boss.w &&
         bl.y > game.boss.y && bl.y < game.boss.y + game.boss.h) {
       bl.y = -999999;
+      addCombo(8);
       damageBoss(dmg, coinMult);
     }
   }
@@ -1480,17 +1804,32 @@ function updateGame() {
       if (p.vy > 0 && p.y + p.h - p.vy <= en.y + 14) {
         en.alive = false;
         p.vy = jumpV * 1.2;
-        game.runCoins += Math.round(15 * coinMult);
+        const gained = Math.round(15 * coinMult);
+        game.runCoins += gained;
+        addQuestProgress('coins', gained);
+        addQuestProgress('kills', 1);
+        addCombo(20);
         Sound.spring();
         addParticles(en.x + en.w / 2, en.y + en.h / 2, '#f43f5e', 12);
-      } else if (p.jetpack > 0) {
+      } else if (p.jetpack > 0 || game.feverTimer > 0) {
         en.alive = false;
+        addQuestProgress('kills', 1);
         addParticles(en.x + en.w / 2, en.y + en.h / 2, '#f43f5e', 10);
       } else if (game.invuln <= 0) {
         en.alive = false;
         hurtPlayer();
         if (!game.running) return;
       }
+    }
+  }
+
+  // Метеориты
+  for (const mt of game.meteors) {
+    mt.y += mt.vy;
+    if (Math.hypot((p.x + p.w / 2) - mt.x, (p.y + p.h / 2) - mt.y) < mt.r + 18) {
+      mt.y = 999999999;
+      hurtPlayer();
+      if (!game.running) return;
     }
   }
 
@@ -1501,6 +1840,7 @@ function updateGame() {
   game.platforms = game.platforms.filter(pl => pl.y < cutY);
   game.items = game.items.filter(it => !it.collected && it.y < cutY);
   game.enemies = game.enemies.filter(en => en.alive && en.y < cutY);
+  game.meteors = game.meteors.filter(mt => mt.y < cutY);
   game.bullets = game.bullets.filter(bl => bl.y > game.cameraY - 40);
 
   // Падение — теряем жизнь и возрождаемся на пружине
@@ -1515,6 +1855,19 @@ function updateGame() {
   const biome = [...BIOMES].reverse().find(bm => game.score >= bm.min) || BIOMES[0];
   document.getElementById('hud-biome').textContent = biome.name;
   document.getElementById('hud-powerups').textContent = (p.shield ? '🛡️ ' : '') + (p.jetpack > 0 ? '🚀' : '');
+
+  const fHud = document.getElementById('fever-hud');
+  const fFill = document.getElementById('fever-fill');
+  const cTxt = document.getElementById('combo-text');
+  if (game.feverTimer > 0) {
+    fHud.classList.add('active');
+    cTxt.textContent = `🔥 FEVER ×3!`;
+    fFill.style.width = `${(game.feverTimer / 360) * 100}%`;
+  } else {
+    fHud.classList.remove('active');
+    cTxt.textContent = `COMBO ×${comboMult}${game.combo > 0 ? ' (' + game.combo + ')' : ''}`;
+    fFill.style.width = `${game.fever}%`;
+  }
 }
 
 function drawGame() {
@@ -1526,6 +1879,11 @@ function drawGame() {
   grad.addColorStop(1, biome.bot);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
+
+  if (game && game.feverTimer > 0) {
+    ctx.fillStyle = 'rgba(236, 72, 153, 0.14)';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   ctx.strokeStyle = biome.grid;
   ctx.lineWidth = 1;
@@ -1568,6 +1926,11 @@ function drawGame() {
     ctx.fillText('👾', en.x + en.w / 2, en.y + en.h / 2);
   }
 
+  for (const mt of game.meteors) {
+    ctx.font = '30px sans-serif';
+    ctx.fillText('☄️', mt.x, mt.y);
+  }
+
   if (game.boss) {
     const bs = game.boss;
     ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
@@ -1601,6 +1964,19 @@ function drawGame() {
   const blink = game.invuln > 0 && Math.floor(game.invuln / 5) % 2 === 0;
   if (!blink) {
     drawDoodle(ctx, game.player.x, game.player.y, game.player.w, game.player.h, getEquippedSkin(), game.player.facing, game.player.shield, game.player.jetpack > 0);
+  }
+
+  if (state.equippedPet) {
+    const ptObj = PETS.find(x => x.id === state.equippedPet);
+    if (ptObj) {
+      const t = Date.now() * 0.004;
+      const px = game.player.x + game.player.w / 2 + Math.cos(t) * 36;
+      const py = game.player.y - 10 + Math.sin(t * 1.4) * 8;
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ptObj.emoji, px, py);
+    }
   }
 
   ctx.restore();
@@ -1662,6 +2038,13 @@ document.getElementById('btn-collect-all').onclick = () => {
 
 document.getElementById('btn-sell-seed').onclick = () => sellSeed(false);
 document.getElementById('btn-sell-all-seeds').onclick = () => sellSeed(true);
+document.getElementById('btn-merge-garden').onclick = mergeGarden;
+
+document.getElementById('btn-quests').onclick = () => {
+  renderQuests();
+  document.getElementById('modal-quests').classList.remove('hidden');
+};
+document.getElementById('btn-quests-close').onclick = () => document.getElementById('modal-quests').classList.add('hidden');
 
 document.querySelectorAll('.case-btn').forEach(btn => { btn.onclick = () => rollSkin(btn.dataset.case); });
 document.getElementById('btn-close-case').onclick = () => document.getElementById('modal-case').classList.add('hidden');

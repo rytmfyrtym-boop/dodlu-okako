@@ -24,6 +24,7 @@
         <span class="icon">🏆</span>
         <span id="ui-best">0</span>
       </div>
+      <button id="btn-quests" class="icon-btn" aria-label="Квесты" title="Квесты и награды">🎯</button>
       <button id="btn-sound" class="icon-btn" aria-label="Звук">🔊</button>
     </header>
 
@@ -54,6 +55,13 @@
             <div class="boss-bar-fill" id="boss-hp-fill" style="width:100%"></div>
           </div>
         </div>
+
+        <!-- Fever & Event HUD -->
+        <div id="fever-hud" class="fever-hud hidden">
+          <span id="combo-text">COMBO ×1</span>
+          <div class="fever-bar"><div id="fever-fill" class="fever-fill"></div></div>
+        </div>
+        <div id="event-banner" class="event-banner hidden">⚡ ИВЕНТ</div>
 
         <div id="record-banner" class="record-banner hidden">🎉 НОВЫЙ РЕКОРД! Поздравляем! 🎉</div>
 
@@ -140,6 +148,7 @@
         <div class="sell-row">
           <button id="btn-sell-seed" class="sell-btn">💸 Продать семя</button>
           <button id="btn-sell-all-seeds" class="sell-btn">💸 Продать все</button>
+          <button id="btn-merge-garden" class="merge-btn">🧬 Слить</button>
         </div>
 
         <div class="garden-grid" id="garden-grid">
@@ -197,6 +206,11 @@
             <p>Прокачка навыков и покупка семян</p>
           </div>
         </div>
+
+        <div id="rebirth-box" class="rebirth-box"></div>
+
+        <h3 class="sub-heading">🐾 Питомцы-спутники</h3>
+        <div class="shop-list" id="pets-list"></div>
 
         <h3 class="sub-heading">Улучшения</h3>
         <div class="shop-list" id="upgrades-list"></div>
@@ -273,6 +287,16 @@
         <p>Пока тебя не было, твои Дуды в саду заработали:</p>
         <div class="offline-amount" id="offline-amount">+0 ококи</div>
         <button id="btn-claim-offline" class="primary-btn">Забрать ококи</button>
+      </div>
+    </div>
+
+    <!-- Modal: Quests & Daily -->
+    <div id="modal-quests" class="modal hidden">
+      <div class="modal-card admin-card">
+        <h3>🎯 Квесты и Награды</h3>
+        <div id="daily-box" class="daily-box"></div>
+        <div id="quests-list" class="shop-list"></div>
+        <button id="btn-quests-close" class="secondary-btn">Закрыть</button>
       </div>
     </div>
 

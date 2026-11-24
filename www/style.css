@@ -973,3 +973,88 @@ html, body {
 }
 .skin-card.rarity-secret.locked { opacity: 0.75; filter: grayscale(0.6); }
 #credit-gemeni { cursor: pointer; }
+
+/* ===== v4: fever, events, pets, merge, rebirth, quests ===== */
+.fever-hud {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 190px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 5px 10px;
+  text-align: center;
+  z-index: 11;
+  pointer-events: none;
+}
+.fever-hud span { font-size: 11px; font-weight: 900; color: #fde047; display: block; margin-bottom: 3px; }
+.fever-bar { width: 100%; height: 7px; background: rgba(255,255,255,0.12); border-radius: 999px; overflow: hidden; }
+.fever-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b, #ec4899); transition: width 0.12s; }
+.fever-hud.active {
+  border-color: #ec4899;
+  box-shadow: 0 0 22px rgba(236, 72, 153, 0.75);
+}
+.fever-hud.active .fever-fill { background: linear-gradient(90deg, #22d3ee, #f472b6, #facc15); }
+
+.event-banner {
+  position: absolute;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #6366f1, #ec4899);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 7px 14px;
+  border-radius: 999px;
+  z-index: 13;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+}
+
+.merge-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  padding: 9px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.plot-card.tier-2 {
+  border-color: #facc15;
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.25);
+}
+.plot-card.tier-3 {
+  border-color: #ec4899;
+  background: linear-gradient(135deg, rgba(236,72,153,0.18), rgba(56,189,248,0.18));
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.35);
+}
+
+.rebirth-box {
+  background: linear-gradient(135deg, rgba(168,85,247,0.22), rgba(245,158,11,0.2));
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.rebirth-box h4 { margin: 0 0 4px; font-size: 15px; color: #fde047; }
+.rebirth-box p { margin: 0 0 10px; font-size: 12px; color: #e2e8f0; }
+
+.daily-box {
+  background: linear-gradient(135deg, rgba(34,197,94,0.18), rgba(56,189,248,0.16));
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.daily-box h4 { margin: 0 0 4px; font-size: 14px; color: #86efac; }
+.daily-box p { margin: 0 0 8px; font-size: 12px; color: #cbd5e1; }
