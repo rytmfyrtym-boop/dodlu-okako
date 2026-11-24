@@ -80,7 +80,7 @@ const CASES = {
   common: { cost: 120,  weights: { common: 62, rare: 30, epic: 7,  legend: 1 } },
   epic:   { cost: 450,  weights: { common: 15, rare: 45, epic: 31, legend: 9 } },
   legend: { cost: 1400, weights: { common: 0,  rare: 0,  epic: 60, legend: 40 } },
-  secret: { cost: 25000, weights: { common: 0, rare: 0, epic: 40, legend: 54, secret: 6 } }
+  secret: { cost: 25000, weights: { common: 0, rare: 0, epic: 34, legend: 56, secret: 10 } }
 };
 
 const BOSS_TEMPLATES = [
@@ -1045,16 +1045,75 @@ function triggerPrank() {
 /* ---------- Hidden casino (только игровые ококи) ---------- */
 const RL_RED = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
 const SLOT_SYMBOLS = [
-  { s: '🍒', w: 30, m: 5 },
-  { s: '🍋', w: 25, m: 8 },
-  { s: '🔔', w: 20, m: 12 },
-  { s: '⭐', w: 13, m: 20 },
-  { s: '💎', w: 8,  m: 40 },
-  { s: '7️⃣', w: 4,  m: 100 }
+  { s: '🍒', w: 27, m: 5 },
+  { s: '🍋', w: 23, m: 8 },
+  { s: '🔔', w: 19, m: 12 },
+  { s: '⭐', w: 15, m: 20 },
+  { s: '💎', w: 10, m: 40 },
+  { s: '7️⃣', w: 6,  m: 100 }
 ];
 const DUP_REFUND = { epic: 400, legend: 1500, secret: 30000 };
 let casinoTab = 'roulette';
 let casinoBusy = false;
+let secretAutoTimer = null;
+
+function stopSecretAuto() {
+  if (secretAutoTimer) {
+    clearInterval(secretAutoTimer);
+    secretAutoTimer = null;
+    const ab = document.getElementById('btn-secret-auto');
+    if (ab) ab.textContent = '⚡ Авто-открытие: ВЫКЛ';
+  }
+}
+
+function openSecretFast() {
+  const cfg = CASES.secret;
+  if (state.coins < cfg.cost) {
+    stopSecretAuto();
+    casinoLog('Не хватает ококов — авто-открытие остановлено', 'lose');
+    return;
+  }
+  state.coins -= cfg.cost;
+  const r = Math.random() * 100;
+  let acc = 0, chosenRarity = 'epic';
+  for (const [rar, w] of Object.entries(cfg.weights)) {
+    acc += w;
+    if (r <= acc) { chosenRarity = rar; break; }
+  }
+  const pool = SKINS.filter(s => s.rarity === chosenRarity && !s.adminOnly);
+  const winner = pool[Math.floor(Math.random() * pool.length)];
+  if (state.unlockedSkins.includes(winner.id)) {
+    const refund = Math.floor(cfg.cost * 0.6);
+    state.coins += refund;
+    Sound.coin();
+    casinoLog(`📦 ${winner.emoji} ${winner.name} (дубль +${refund} ококи)`, '');
+  } else {
+    state.unlockedSkins.push(winner.id);
+    state.equippedSkin = winner.id;
+    Sound.win();
+    casinoLog(`🎉 ВЫПАЛ НОВЫЙ: ${winner.emoji} ${winner.name} (${RARITY[winner.rarity].label})!`, 'win');
+  }
+  saveState(); updateTopHUD(); updateStartPreview(); renderSkins();
+}
+
+function toggleSecretAuto() {
+  if (secretAutoTimer) {
+    stopSecretAuto();
+    return;
+  }
+  if (state.coins < CASES.secret.cost) {
+    showToast(`Нужно ${CASES.secret.cost} ококи`);
+    return;
+  }
+  const ab = document.getElementById('btn-secret-auto');
+  if (ab) ab.textContent = '⏹ Авто-открытие: ВКЛ';
+  openSecretFast();
+  if (state.coins >= CASES.secret.cost) {
+    secretAutoTimer = setInterval(openSecretFast, 650);
+  } else {
+    stopSecretAuto();
+  }
+}
 
 function casinoLog(msg, cls) {
   const el = document.getElementById('casino-log');
@@ -1119,10 +1178,12 @@ function renderCasino() {
       <div class="secret-box">
         <div class="big">🗝️</div>
         <h3>Секрет-кейс</h3>
-        <p>Цена: ${CASES.secret.cost} ококов. Гарантированно эпик или выше, а с шансом 6% выпадает СЕКРЕТНЫЙ скин с огромными бонусами!</p>
+        <p>Цена: ${CASES.secret.cost} ококов. Гарантированно эпик или выше, а с шансом 10% выпадает СЕКРЕТНЫЙ скин с огромными бонусами!</p>
         <button id="btn-secret-case" class="play-btn">Открыть за ${CASES.secret.cost} ококи</button>
+        <button id="btn-secret-auto" class="secondary-btn">${secretAutoTimer ? '⏹ Авто-открытие: ВКЛ' : '⚡ Авто-открытие: ВЫКЛ'}</button>
       </div>`;
     document.getElementById('btn-secret-case').onclick = () => rollSkin('secret');
+    document.getElementById('btn-secret-auto').onclick = toggleSecretAuto;
   }
 }
 
@@ -1138,8 +1199,13 @@ function spinRoulette(color) {
   btns.forEach(b => b.disabled = true);
   casinoLog('Крутится...');
 
-  const final = Math.floor(Math.random() * 37);
   const colorOf = n => n === 0 ? 'green' : RL_RED.includes(n) ? 'red' : 'black';
+  let final = Math.floor(Math.random() * 37);
+  if (color === 'green' && final !== 0 && Math.random() < 0.015) {
+    final = 0;
+  } else if ((color === 'red' || color === 'black') && colorOf(final) !== color && Math.random() < 0.08) {
+    final = Math.floor(Math.random() * 37);
+  }
   let ticks = 0;
   const iv = setInterval(() => {
     const n = Math.floor(Math.random() * 37);
@@ -1191,6 +1257,15 @@ function spinSlots() {
   btn.disabled = true;
   casinoLog('Крутится...');
   const result = [rollSlotSymbol(), rollSlotSymbol(), rollSlotSymbol()];
+  if (result[0].s === result[1].s && result[2].s !== result[0].s && Math.random() < 0.10) {
+    result[2] = result[0];
+  } else if (result[1].s === result[2].s && result[0].s !== result[1].s && Math.random() < 0.10) {
+    result[0] = result[1];
+  } else if (result[0].s === result[2].s && result[1].s !== result[0].s && Math.random() < 0.10) {
+    result[1] = result[0];
+  } else if (result[0].s !== result[1].s && result[1].s !== result[2].s && result[0].s !== result[2].s && Math.random() < 0.12) {
+    result[2] = result[0];
+  }
   const reels = [0, 1, 2].map(i => document.getElementById('reel' + i));
   const stopAt = [12, 20, 28];
   let tick = 0;
@@ -1238,8 +1313,17 @@ function openCasino() {
 }
 
 document.getElementById('credit-gemeni').addEventListener('click', openCasino);
-document.getElementById('btn-casino-close').onclick = () => { if (!casinoBusy) document.getElementById('modal-casino').classList.add('hidden'); };
-document.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { if (!casinoBusy) { casinoTab = b.dataset.ctab; renderCasino(); } });
+document.getElementById('btn-casino-close').onclick = () => {
+  if (casinoBusy) return;
+  stopSecretAuto();
+  document.getElementById('modal-casino').classList.add('hidden');
+};
+document.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => {
+  if (casinoBusy) return;
+  stopSecretAuto();
+  casinoTab = b.dataset.ctab;
+  renderCasino();
+});
 document.querySelectorAll('[data-bet]').forEach(b => b.onclick = () => {
   const inp = document.getElementById('bet-input');
   let v = Math.floor(Number(inp.value) || 10);
