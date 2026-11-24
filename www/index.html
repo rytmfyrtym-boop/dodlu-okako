@@ -276,6 +276,29 @@
       </div>
     </div>
 
+    <!-- Modal: Hidden casino -->
+    <div id="modal-casino" class="modal casino hidden">
+      <div class="modal-card casino-card">
+        <h3>🎰 Скрытое казино</h3>
+        <div class="casino-balance">Баланс: <b id="casino-balance">0</b> ококи</div>
+        <div class="casino-note">Играем только на игровые ококи — не на настоящие деньги.</div>
+        <div class="casino-tabs">
+          <button data-ctab="roulette" class="active">🎡 Рулетка</button>
+          <button data-ctab="slots">🎰 Слоты</button>
+          <button data-ctab="secret">🗝 Секрет-кейс</button>
+        </div>
+        <div id="bet-row" class="bet-row">
+          <input id="bet-input" class="admin-input" type="number" value="100" />
+          <button data-bet="half" class="chip-btn">½</button>
+          <button data-bet="x2" class="chip-btn">×2</button>
+          <button data-bet="max" class="chip-btn">MAX</button>
+        </div>
+        <div id="casino-body"></div>
+        <div id="casino-log" class="casino-log"></div>
+        <button id="btn-casino-close" class="secondary-btn">Выйти</button>
+      </div>
+    </div>
+
     <!-- Modal: Access code -->
     <div id="modal-code" class="modal hidden">
       <div class="modal-card">

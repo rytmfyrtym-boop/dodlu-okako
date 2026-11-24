@@ -915,3 +915,61 @@ html, body {
   text-shadow: 0 0 12px #f0abfc, 0 0 30px #c026d3, 0 0 60px #c026d3;
 }
 .prank .secondary-btn { width: auto; padding: 12px 28px; }
+
+/* ===== v3: casino, secret skins ===== */
+.casino { z-index: 45; }
+.casino-card { max-height: 92vh; overflow-y: auto; }
+.casino-card h3 { margin: 0 0 6px; }
+.casino-balance { font-size: 16px; color: #fde047; font-weight: 800; }
+.casino-note { font-size: 11px; color: var(--muted); margin: 4px 0 10px; }
+.casino-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.casino-tabs button {
+  background: var(--surface-2); border: 1px solid var(--border); color: #cbd5e1;
+  border-radius: 10px; padding: 8px 2px; font-size: 11px; font-weight: 800; cursor: pointer;
+}
+.casino-tabs button.active { background: rgba(250, 204, 21, 0.2); border-color: #facc15; color: #fde047; }
+.bet-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.chip-btn {
+  background: var(--surface-2); border: 1px solid var(--border); color: white;
+  border-radius: 10px; padding: 0 10px; font-weight: 800; cursor: pointer;
+}
+.rl-wheel {
+  width: 110px; height: 110px; border-radius: 50%;
+  margin: 8px auto 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 38px; font-weight: 900; color: white;
+  border: 6px solid #facc15; background: #334155;
+  box-shadow: 0 0 24px rgba(250, 204, 21, 0.35);
+}
+.rl-wheel.red { background: #dc2626; }
+.rl-wheel.black { background: #111827; }
+.rl-wheel.green { background: #16a34a; }
+.rl-bets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rl-bets button, .play-btn {
+  border: none; border-radius: 12px; padding: 12px 4px;
+  font-weight: 900; font-size: 13px; color: white; cursor: pointer;
+}
+.rl-bets .b-red { background: #dc2626; }
+.rl-bets .b-black { background: #1f2937; border: 1px solid #475569; }
+.rl-bets .b-green { background: #16a34a; }
+.play-btn { width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: #1c1917; font-size: 15px; }
+.rl-bets button:disabled, .play-btn:disabled { opacity: 0.5; }
+.slot-reels { display: flex; justify-content: center; gap: 8px; margin: 10px 0 14px; }
+.slot-reel {
+  width: 72px; height: 84px; border-radius: 14px; background: #0f172a;
+  border: 3px solid #facc15; display: flex; align-items: center; justify-content: center; font-size: 42px;
+}
+.slot-pay { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.casino-log { margin: 10px 0; font-size: 13px; font-weight: 800; min-height: 20px; }
+.casino-log.win { color: #86efac; }
+.casino-log.lose { color: #fca5a5; }
+.secret-box { text-align: center; padding: 10px 0; }
+.secret-box .big { font-size: 56px; }
+.secret-box p { font-size: 12px; color: #cbd5e1; margin: 6px 0 12px; }
+.skin-cat { grid-column: 1 / -1; font-size: 13px; font-weight: 900; color: #cbd5e1; margin: 8px 0 -2px; }
+.skin-card.rarity-secret {
+  border-color: #ff2d95;
+  background: linear-gradient(135deg, rgba(255,45,149,0.25), rgba(56,189,248,0.2));
+  box-shadow: 0 0 18px rgba(255, 45, 149, 0.35);
+}
+.skin-card.rarity-secret.locked { opacity: 0.75; filter: grayscale(0.6); }
+#credit-gemeni { cursor: pointer; }

@@ -23,7 +23,8 @@ const RARITY = {
   common: { label: 'ОБЫЧНЫЙ', color: '#94a3b8' },
   rare:   { label: 'РЕДКИЙ',  color: '#3b82f6' },
   epic:   { label: 'ЭПИК',    color: '#a855f7' },
-  legend: { label: 'ЛЕГЕНДА', color: '#f59e0b' }
+  legend: { label: 'ЛЕГЕНДА', color: '#f59e0b' },
+  secret: { label: 'СЕКРЕТ',  color: '#ff2d95' }
 };
 
 /* Бонусы скинов (все реализованы в движке):
@@ -47,7 +48,15 @@ const SKINS = [
   { id: 'dragon',    name: 'Дракончик',      emoji: '🐉', color: '#ef4444', belly: '#fde047', rarity: 'legend', bonusText: 'Огненные выстрелы, +20% прыжок, +30% ококи', bonus: { jumpMult: 0.20, coinMult: 0.30, pierce: true } },
   { id: 'king',      name: 'Золотой Король', emoji: '👑', color: '#facc15', belly: '#fef08a', rarity: 'legend', bonusText: '+55% сад и +45% ококи', bonus: { gardenMult: 0.55, coinMult: 0.45 } },
   { id: 'diamond',   name: 'Алмазный Дуд',   emoji: '💎', color: '#22d3ee', belly: '#cffafe', rarity: 'legend', bonusText: '+1 жизнь, щит, +40% ококи, +35% сад', bonus: { startShield: true, coinMult: 0.40, gardenMult: 0.35, extraLife: 1 } },
-  { id: 'galaxy',    name: 'Бог Галактики',  emoji: '🌌', color: '#a855f7', belly: '#38bdf8', rarity: 'legend', bonusText: '+1 жизнь, щит, тройной выстрел, +2 урон, +50% ококи', bonus: { startShield: true, coinMult: 0.50, bossDmg: 2, neonTrail: true, extraLife: 1, multiShot: 3 } }
+  { id: 'galaxy',    name: 'Бог Галактики',  emoji: '🌌', color: '#a855f7', belly: '#38bdf8', rarity: 'legend', bonusText: '+1 жизнь, щит, тройной выстрел, +2 урон, +50% ококи', bonus: { startShield: true, coinMult: 0.50, bossDmg: 2, neonTrail: true, extraLife: 1, multiShot: 3 } },
+
+  { id: 'femboy',    name: 'Фембой',         emoji: '🎀', color: '#f9a8d4', belly: '#fdf2f8', rarity: 'legend', bonusText: '+1 жизнь, +35% ококи и сад, мягкое падение', bonus: { coinMult: 0.35, gardenMult: 0.35, gravMult: -0.10, extraLife: 1, invuln: 60 } },
+  { id: 'paimon',    name: 'Паймон-Дуд (Геншин)', emoji: '🧚', color: '#e2e8f0', belly: '#fde68a', rarity: 'epic', bonusText: 'Парит, мощный магнит, +30% ококи', bonus: { gravMult: -0.20, magnetBonus: 120, coinMult: 0.30 } },
+
+  // СЕКРЕТНЫЕ скины: выпадают только в казино (Секрет-кейс, слоты 777) или от админа
+  { id: 'nikita',    name: 'Никита Фем',     emoji: '💖', color: '#ff2d95', belly: '#ffd1ea', rarity: 'secret', bonusText: '+2 жизни, щит, ×3 ококи, ×3 сад, 5 пуль, +3 урон', bonus: { extraLife: 2, startShield: true, coinMult: 2, gardenMult: 2, bossDmg: 3, multiShot: 5, pierce: true, neonTrail: true, magnetBonus: 150, jumpMult: 0.25, invuln: 100, bossHeal: 1, shieldOnBoss: true } },
+  { id: 'gemeni',    name: 'Gemeni-Дуд',     emoji: '✨', color: '#38bdf8', belly: '#e0f2fe', rarity: 'secret', bonusText: '+3 жизни, ×4 ококи, ×4 сад, парение, +4 урон', bonus: { extraLife: 3, startShield: true, coinMult: 3, gardenMult: 3, bossDmg: 4, multiShot: 3, pierce: true, neonTrail: true, magnetBonus: 200, gravMult: -0.25, shieldOnBoss: true, bossHeal: 1 } },
+  { id: 'admin',     name: 'АДМИН',          emoji: '🛡️', color: '#facc15', belly: '#ffffff', rarity: 'secret', adminOnly: true, bonusText: 'ВСЁ НА МАКСИМУМ: ×6 ококи и сад, +5 жизней, +10 урон', bonus: { extraLife: 5, startShield: true, coinMult: 5, gardenMult: 5, bossDmg: 10, multiShot: 5, pierce: true, neonTrail: true, magnetBonus: 300, jumpMult: 0.30, gravMult: -0.30, speedMult: 0.30, invuln: 200, bossHeal: 1, shieldOnBoss: true } }
 ];
 
 const SEEDS = {
@@ -70,7 +79,8 @@ const PLOT_UNLOCK_COSTS = [0, 0, 0, 120, 320, 750, 1500, 3000, 6000];
 const CASES = {
   common: { cost: 120,  weights: { common: 62, rare: 30, epic: 7,  legend: 1 } },
   epic:   { cost: 450,  weights: { common: 15, rare: 45, epic: 31, legend: 9 } },
-  legend: { cost: 1400, weights: { common: 0,  rare: 0,  epic: 60, legend: 40 } }
+  legend: { cost: 1400, weights: { common: 0,  rare: 0,  epic: 60, legend: 40 } },
+  secret: { cost: 25000, weights: { common: 0, rare: 0, epic: 40, legend: 54, secret: 6 } }
 };
 
 const BOSS_TEMPLATES = [
@@ -235,6 +245,8 @@ function updateTopHUD() {
   document.getElementById('ui-best').textContent = fmt(state.bestScore);
   document.getElementById('btn-sound').textContent = state.sound ? '🔊' : '🔇';
   document.getElementById('garden-bank').textContent = fmt(state.gardenBank);
+  const cb = document.getElementById('casino-balance');
+  if (cb) cb.textContent = state.inf ? '∞' : fmt(state.coins);
 }
 
 /* ---------- Doodle drawing ---------- */
@@ -487,17 +499,28 @@ function renderSkins() {
   document.getElementById('skin-count').textContent = `${state.unlockedSkins.length}/${SKINS.length}`;
   const grid = document.getElementById('skins-grid');
   grid.innerHTML = '';
-  SKINS.forEach(s => {
+  const heads = { common: '⚪ Обычные', rare: '🔵 Редкие', epic: '🟣 Эпические', legend: '🟠 Легендарные', secret: '🔮 СЕКРЕТНЫЕ (казино и админ)' };
+  const sortedSkins = ['common', 'rare', 'epic', 'legend', 'secret'].flatMap(r => SKINS.filter(s => s.rarity === r));
+  let lastRar = null;
+  sortedSkins.forEach(s => {
+    if (s.rarity !== lastRar) {
+      lastRar = s.rarity;
+      const h = document.createElement('div');
+      h.className = 'skin-cat';
+      h.textContent = heads[s.rarity];
+      grid.appendChild(h);
+    }
     const owned = state.unlockedSkins.includes(s.id);
     const eq = state.equippedSkin === s.id;
     const card = document.createElement('div');
     card.className = `skin-card rarity-${s.rarity}` + (!owned ? ' locked' : '') + (eq ? ' equipped' : '');
+    const hide = s.rarity === 'secret' && !owned;
     card.innerHTML = `
-      <div class="skin-avatar" style="background:${s.color}33; border: 2px solid ${s.color}">${s.emoji}</div>
-      <div class="skin-name">${s.name}</div>
-      <div class="skin-bonus">${owned ? (eq ? '✅ Выбран' : s.bonusText) : '🔒 В кейсах'}</div>`;
+      <div class="skin-avatar" style="background:${s.color}33; border: 2px solid ${s.color}">${hide ? '❓' : s.emoji}</div>
+      <div class="skin-name">${hide ? '???' : s.name}</div>
+      <div class="skin-bonus">${owned ? (eq ? '✅ Выбран' : s.bonusText) : (hide ? '🔒 Секрет' : '🔒 В кейсах')}</div>`;
     card.onclick = () => {
-      if (!owned) { showToast('Выбей этот скин в кейсах выше!'); return; }
+      if (!owned) { showToast(hide ? 'Секретный скин... ищи в казино 😉' : 'Выбей этот скин в кейсах выше!'); return; }
       state.equippedSkin = s.id;
       Sound.coin();
       saveState(); updateTopHUD(); updateStartPreview(); renderSkins();
@@ -519,7 +542,7 @@ function rollSkin(caseKey) {
     acc += w;
     if (r <= acc) { chosenRarity = rar; break; }
   }
-  const pool = SKINS.filter(s => s.rarity === chosenRarity);
+  const pool = SKINS.filter(s => s.rarity === chosenRarity && !s.adminOnly);
   const winner = pool[Math.floor(Math.random() * pool.length)];
 
   const modal = document.getElementById('modal-case');
@@ -531,7 +554,8 @@ function rollSkin(caseKey) {
 
   const items = [];
   const winIndex = 24;
-  for (let i = 0; i < 32; i++) items.push(i === winIndex ? winner : SKINS[Math.floor(Math.random() * SKINS.length)]);
+  const fillers = SKINS.filter(s => s.rarity !== 'secret');
+  for (let i = 0; i < 32; i++) items.push(i === winIndex ? winner : fillers[Math.floor(Math.random() * fillers.length)]);
 
   track.style.transition = 'none';
   track.style.transform = 'translateX(0px)';
@@ -806,6 +830,213 @@ function triggerPrank() {
   }, 5000));
 }
 
+/* ---------- Hidden casino (только игровые ококи) ---------- */
+const RL_RED = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+const SLOT_SYMBOLS = [
+  { s: '🍒', w: 30, m: 5 },
+  { s: '🍋', w: 25, m: 8 },
+  { s: '🔔', w: 20, m: 12 },
+  { s: '⭐', w: 13, m: 20 },
+  { s: '💎', w: 8,  m: 40 },
+  { s: '7️⃣', w: 4,  m: 100 }
+];
+const DUP_REFUND = { epic: 400, legend: 1500, secret: 30000 };
+let casinoTab = 'roulette';
+let casinoBusy = false;
+
+function casinoLog(msg, cls) {
+  const el = document.getElementById('casino-log');
+  el.textContent = msg;
+  el.className = 'casino-log ' + (cls || '');
+}
+
+function getBet() {
+  const b = Math.floor(Number(document.getElementById('bet-input').value) || 0);
+  const max = state.inf ? 1000000 : state.coins;
+  if (b < 10) { showToast('Минимальная ставка 10 ококов'); return 0; }
+  if (b > max) { showToast('Не хватает ококов'); return 0; }
+  return b;
+}
+
+function grantSkin(rarity) {
+  const pool = SKINS.filter(s => s.rarity === rarity && !s.adminOnly);
+  const sk = pool[Math.floor(Math.random() * pool.length)];
+  if (!sk) return null;
+  if (state.unlockedSkins.includes(sk.id)) {
+    const refund = DUP_REFUND[rarity] || 300;
+    state.coins += refund;
+    return { skin: sk, dup: true, refund };
+  }
+  state.unlockedSkins.push(sk.id);
+  return { skin: sk, dup: false };
+}
+
+function skinDropText(res) {
+  if (!res) return '';
+  return res.dup
+    ? ` | Дубль ${res.skin.name}: +${res.refund} ококи`
+    : ` | 🎉 СКИН: ${res.skin.emoji} ${res.skin.name}!`;
+}
+
+function renderCasino() {
+  document.querySelectorAll('[data-ctab]').forEach(b => b.classList.toggle('active', b.dataset.ctab === casinoTab));
+  document.getElementById('bet-row').classList.toggle('hidden', casinoTab === 'secret');
+  const body = document.getElementById('casino-body');
+  casinoLog('');
+  if (casinoTab === 'roulette') {
+    body.innerHTML = `
+      <div id="rl-wheel" class="rl-wheel">?</div>
+      <div class="rl-bets">
+        <button class="b-red" data-rl="red">🔴 Красное ×2</button>
+        <button class="b-black" data-rl="black">⚫ Чёрное ×2</button>
+        <button class="b-green" data-rl="green">🟢 Зеро ×36 + скин</button>
+      </div>`;
+    body.querySelectorAll('[data-rl]').forEach(b => b.onclick = () => spinRoulette(b.dataset.rl));
+  } else if (casinoTab === 'slots') {
+    body.innerHTML = `
+      <div class="slot-reels">
+        <div class="slot-reel" id="reel0">🍒</div>
+        <div class="slot-reel" id="reel1">🍋</div>
+        <div class="slot-reel" id="reel2">🔔</div>
+      </div>
+      <div class="slot-pay">3 одинаковых: 🍒×5 🍋×8 🔔×12 ⭐×20 💎×40 7️⃣×100 • Пара — возврат ставки<br>⭐⭐⭐ — шанс на эпик, 💎💎💎 — легендарный скин, 7️⃣7️⃣7️⃣ — СЕКРЕТНЫЙ скин!</div>
+      <button id="btn-spin-slots" class="play-btn">🎰 Крутить</button>`;
+    document.getElementById('btn-spin-slots').onclick = spinSlots;
+  } else {
+    body.innerHTML = `
+      <div class="secret-box">
+        <div class="big">🗝️</div>
+        <h3>Секрет-кейс</h3>
+        <p>Цена: ${CASES.secret.cost} ококов. Гарантированно эпик или выше, а с шансом 6% выпадает СЕКРЕТНЫЙ скин с огромными бонусами!</p>
+        <button id="btn-secret-case" class="play-btn">Открыть за ${CASES.secret.cost} ококи</button>
+      </div>`;
+    document.getElementById('btn-secret-case').onclick = () => rollSkin('secret');
+  }
+}
+
+function spinRoulette(color) {
+  if (casinoBusy) return;
+  const bet = getBet();
+  if (!bet) return;
+  casinoBusy = true;
+  state.coins -= bet;
+  saveState(); updateTopHUD();
+  const wheel = document.getElementById('rl-wheel');
+  const btns = document.querySelectorAll('[data-rl]');
+  btns.forEach(b => b.disabled = true);
+  casinoLog('Крутится...');
+
+  const final = Math.floor(Math.random() * 37);
+  const colorOf = n => n === 0 ? 'green' : RL_RED.includes(n) ? 'red' : 'black';
+  let ticks = 0;
+  const iv = setInterval(() => {
+    const n = Math.floor(Math.random() * 37);
+    wheel.textContent = n;
+    wheel.className = 'rl-wheel ' + colorOf(n);
+    Sound.beep(300 + (ticks % 5) * 60, 0.05, 'square', 0.04);
+    if (++ticks > 24) {
+      clearInterval(iv);
+      wheel.textContent = final;
+      wheel.className = 'rl-wheel ' + colorOf(final);
+      const res = colorOf(final);
+      let msg, cls;
+      if (res === color) {
+        const mult = color === 'green' ? 36 : 2;
+        const win = bet * mult;
+        state.coins += win;
+        msg = `✅ Выпало ${final}! Выигрыш +${win} ококи`;
+        cls = 'win';
+        Sound.win();
+        if (color === 'green') msg += skinDropText(grantSkin('legend'));
+      } else {
+        msg = `❌ Выпало ${final}. Проигрыш −${bet}`;
+        cls = 'lose';
+        Sound.hit();
+      }
+      casinoLog(msg, cls);
+      saveState(); updateTopHUD(); renderSkins(); updateStartPreview();
+      btns.forEach(b => b.disabled = false);
+      casinoBusy = false;
+    }
+  }, 80);
+}
+
+function rollSlotSymbol() {
+  const total = SLOT_SYMBOLS.reduce((a, s) => a + s.w, 0);
+  let r = Math.random() * total;
+  for (const s of SLOT_SYMBOLS) { r -= s.w; if (r <= 0) return s; }
+  return SLOT_SYMBOLS[0];
+}
+
+function spinSlots() {
+  if (casinoBusy) return;
+  const bet = getBet();
+  if (!bet) return;
+  casinoBusy = true;
+  state.coins -= bet;
+  saveState(); updateTopHUD();
+  const btn = document.getElementById('btn-spin-slots');
+  btn.disabled = true;
+  casinoLog('Крутится...');
+  const result = [rollSlotSymbol(), rollSlotSymbol(), rollSlotSymbol()];
+  const reels = [0, 1, 2].map(i => document.getElementById('reel' + i));
+  const stopAt = [12, 20, 28];
+  let tick = 0;
+  const iv = setInterval(() => {
+    tick++;
+    reels.forEach((el, i) => {
+      if (tick < stopAt[i]) el.textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)].s;
+      else if (tick === stopAt[i]) { el.textContent = result[i].s; Sound.coin(); }
+    });
+    if (tick >= stopAt[2]) {
+      clearInterval(iv);
+      const [a, b, c] = result;
+      let msg, cls;
+      if (a.s === b.s && b.s === c.s) {
+        const win = bet * a.m;
+        state.coins += win;
+        msg = `🎉 ДЖЕКПОТ ${a.s}${a.s}${a.s}! +${win} ококи`;
+        cls = 'win';
+        Sound.win();
+        if (a.s === '7️⃣') msg += skinDropText(grantSkin('secret'));
+        else if (a.s === '💎') msg += skinDropText(grantSkin('legend'));
+        else if (a.s === '⭐') msg += skinDropText(grantSkin('epic'));
+      } else if (a.s === b.s || b.s === c.s || a.s === c.s) {
+        state.coins += bet;
+        msg = '🤝 Пара — ставка возвращена';
+        cls = '';
+      } else {
+        msg = `❌ Не повезло. Проигрыш −${bet}`;
+        cls = 'lose';
+        Sound.hit();
+      }
+      casinoLog(msg, cls);
+      saveState(); updateTopHUD(); renderSkins(); updateStartPreview();
+      btn.disabled = false;
+      casinoBusy = false;
+    }
+  }, 80);
+}
+
+function openCasino() {
+  casinoTab = 'roulette';
+  renderCasino();
+  updateTopHUD();
+  document.getElementById('modal-casino').classList.remove('hidden');
+}
+
+document.getElementById('credit-gemeni').addEventListener('click', openCasino);
+document.getElementById('btn-casino-close').onclick = () => { if (!casinoBusy) document.getElementById('modal-casino').classList.add('hidden'); };
+document.querySelectorAll('[data-ctab]').forEach(b => b.onclick = () => { if (!casinoBusy) { casinoTab = b.dataset.ctab; renderCasino(); } });
+document.querySelectorAll('[data-bet]').forEach(b => b.onclick = () => {
+  const inp = document.getElementById('bet-input');
+  let v = Math.floor(Number(inp.value) || 10);
+  if (b.dataset.bet === 'half') v = Math.max(10, Math.floor(v / 2));
+  else if (b.dataset.bet === 'x2') v = v * 2;
+  else v = state.inf ? 1000000 : Math.max(10, Math.floor(state.coins));
+  inp.value = v;
+});
+
 /* ---------- Game engine ---------- */
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -922,7 +1153,8 @@ function shootBullet() {
   Sound.shoot();
   game.shootCd = 12;
   const p = game.player;
-  const spread = b.multiShot ? [-2.6, 0, 2.6] : [0];
+  const n = b.multiShot || 1;
+  const spread = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * 2.6);
   for (const vx of spread) {
     game.bullets.push({ x: p.x + p.w / 2, y: p.y, vx, vy: -14, pierce: !!b.pierce });
   }
